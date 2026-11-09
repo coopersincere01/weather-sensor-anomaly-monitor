@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 // Store one weather sensor reading
 typedef struct {
@@ -96,6 +100,8 @@ SensorStats analyze_readings(const SensorReading *readings, size_t count) {
 
  // Get the current time using the Windows high-resolution timer
 double current_time_seconds(void) {
+#ifdef _WIN32
+    // Windows high-resolution timer
     LARGE_INTEGER frequency;
     LARGE_INTEGER counter;
 
@@ -107,6 +113,19 @@ double current_time_seconds(void) {
 
     return (double)counter.QuadPart /
            (double)frequency.QuadPart;
+
+#else
+    // Linux monotonic high-resolution timer
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        fprintf(stderr, "Error: Could not read the timer.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return (double)ts.tv_sec +
+           (double)ts.tv_nsec / 1000000000.0;
+#endif
 }
 
 int main(int argc, char *argv[]) {
