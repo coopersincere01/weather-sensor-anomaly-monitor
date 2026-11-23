@@ -57,3 +57,10 @@ dkms.conf
 # Linux compiled executables
 /baseline
 /optimized
+# Generated benchmark and sanitizer executables
+/baseline_O*
+/optimized_O*
+/baseline_san
+/optimized_san
+/baseline_check
+/optimized_check

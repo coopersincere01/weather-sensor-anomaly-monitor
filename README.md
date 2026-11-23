@@ -138,63 +138,79 @@ The baseline reports 10,000 node allocations, while the optimized version report
 
 Execution time varies depending on the computer and testing conditions.
 
-## Performance Benchmarking
+## Final Performance Benchmarking
 
-I compared the baseline and optimized implementations using three dataset sizes:
+The final project compares the linked-list baseline and contiguous-array implementation at four dataset sizes: 10,000, 50,000, 100,000, and 1,000,000 readings.
 
-- 10,000 sensor readings
-- 100,000 sensor readings
-- 1,000,000 sensor readings
+All tests were performed in GitHub Codespaces on Ubuntu Linux using GCC 13.3.0. The environment reported an x86-64 AMD EPYC 7763 processor with two available CPUs.
 
-Both programs were compiled using GCC with -Wall and -Wextra. No additional optimization flags were used, so GCC's default -O0 optimization level applied.
+### Compilation Optimization Levels
 
-The benchmarking process included:
-
-1. Running each program once as a warm-up.
-2. Running each program five additional times per dataset size.
-3. Recording the execution time of each run.
-4. Calculating the median execution time.
-5. Dividing the baseline median by the optimized median to calculate the speedup.
-6. Confirming that both programs produced identical temperature statistics and anomaly counts.
-
-The measured execution time includes allocating the processing data structure, analyzing the readings, and releasing the processing memory.
-
-Generating the original test data and printing results are excluded from the timing.
-
-### Benchmark Commands
-
-Run each version with the following dataset sizes:
+Compile all six program variants:
 
 ```bash
-./baseline 10000
-./optimized 10000
-
-./baseline 100000
-./optimized 100000
-
-./baseline 1000000
-./optimized 1000000
+for level in 0 2 3; do
+    gcc -Wall -Wextra -O"$level" baseline.c -o "baseline_O$level"
+    gcc -Wall -Wextra -O"$level" optimized.c -o "optimized_O$level"
+done
 ```
 
-Repeat each command five times after a warm-up run and calculate the median reported execution time.
+Run an example:
+
+```bash
+./baseline_O2 100000
+./optimized_O2 100000
+```
+
+Optimization levels:
+
+- `-O0`: Compiler optimizations disabled.
+- `-O2`: Enables many general-purpose compiler optimizations.
+- `-O3`: Enables additional aggressive optimizations.
+
+### Reproduce the Benchmarks
+
+Python 3 is required for the benchmarking script.
+
+After compiling the six variants, run:
+
+```bash
+python3 benchmark.py
+```
+
+The script performs one warm-up run and five measured trials for each configuration. It checks matching output across implementations, calculates median execution times, and saves:
+
+- `benchmark_trials.csv`: All 120 individual measurements.
+- `benchmark_summary.csv`: Median times and speedup ratios.
+
+The timer includes processing-memory allocation, copying or list construction, analysis, and processing-memory cleanup. Original data generation and result printing are excluded.
 
 ### Final Benchmark Results
 
-Testing environment: GitHub Codespaces, Ubuntu Linux, GCC 13.3.0.
+All reported times are median execution times in milliseconds.
 
-| Sensor Readings | Baseline (ms) | Optimized (ms) | Speedup |
-|---|---:|---:|---:|
-| 10,000 | 0.5015 | 0.1745 | 2.87x |
-| 100,000 | 4.8182 | 1.6149 | 2.98x |
-| 1,000,000 | 60.4719 | 17.0911 | 3.54x |
+| Readings | Compiler | Baseline (ms) | Optimized (ms) | Speedup |
+|---|---|---:|---:|---:|
+| 10,000 | -O0 | 0.459336 | 0.174365 | 2.63x |
+| 10,000 | -O2 | 0.408080 | 0.122228 | 3.34x |
+| 10,000 | -O3 | 0.418691 | 0.121937 | 3.43x |
+| 50,000 | -O0 | 2.403670 | 0.868326 | 2.77x |
+| 50,000 | -O2 | 2.007923 | 0.527464 | 3.81x |
+| 50,000 | -O3 | 1.920460 | 0.531521 | 3.61x |
+| 100,000 | -O0 | 5.642377 | 1.647922 | 3.42x |
+| 100,000 | -O2 | 4.028630 | 1.570166 | 2.57x |
+| 100,000 | -O3 | 4.558000 | 1.091194 | 4.18x |
+| 1,000,000 | -O0 | 48.179313 | 17.080349 | 2.82x |
+| 1,000,000 | -O2 | 45.404227 | 11.335691 | 4.01x |
+| 1,000,000 | -O3 | 40.514743 | 11.249270 | 3.60x |
 
-The optimized version was faster across all three dataset sizes.
+The contiguous-array implementation was faster in all 12 comparisons.
 
-For the largest dataset, the optimized version achieved a 3.54x speedup, exceeding my original goal of making the program at least twice as fast.
+At 1,000,000 readings, the optimized program took 11.335691 ms with -O2 versus 45.404227 ms for the baseline, a 4.01x speedup.
 
-The improvement likely comes from reducing separate memory allocations and accessing sensor readings sequentially in memory.
+The optimized program improved from 17.080349 ms at -O0 to 11.335691 ms at -O2. At this size, -O3 provided less than a 1% improvement over -O2.
 
-These benchmarks measure execution time and do not directly measure CPU cache misses.
+These results show benefits from both the source-level memory-layout change and compiler optimization. Small differences across configurations may also reflect system variability. Cache misses were not directly measured.
 
 ## Memory Management
 
@@ -235,7 +251,7 @@ gcc -Wall -Wextra -fanalyzer optimized.c -o optimized_check
 
 These static-analysis checks completed without warnings in the original Windows development environment.
 
-AddressSanitizer was also attempted, but the Windows GCC installation did not include the required library.
+AddressSanitizer and UndefinedBehaviorSanitizer were later run successfully in Linux Codespaces on both implementations, including 10,000 and 1,000,000 readings. No errors or leaks were reported in those runs.
 
 Static analysis did not identify memory problems, although it cannot guarantee that every possible memory issue has been detected.
 
@@ -266,16 +282,10 @@ The optimized version advances through consecutive 16-byte sensor records withou
 
 This predictable access pattern can improve spatial locality and help the CPU make better use of its cache.
 
-The assembly analysis used -O2, while the reported execution-time benchmarks used the default -O0 setting.
+The assembly analysis used GCC 16.2 at -O2, while the final benchmarks used GCC 13.3.0 at -O0, -O2, and -O3.
 
-## Future Improvements
+## Further Research
 
-For the final version of this project, I plan to:
+Possible future improvements include measuring hardware cache misses using performance counters, examining larger datasets, and testing the program on ARM hardware.
 
-- Compare compilation results using -O0, -O2, and -O3.
-- Investigate additional ways to improve memory layout.
-- Examine how CPU caches and memory access patterns affect execution time.
-- Expand the assembly analysis and architectural discussion.
-- Continue testing both implementations to confirm that optimization does not change the results.
-
-The goal is to improve the program's performance while maintaining accurate sensor analysis and proper memory management.
+The measurements in this repository reflect the specified Codespaces environment. Execution times may vary on other systems.

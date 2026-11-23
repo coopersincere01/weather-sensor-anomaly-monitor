@@ -163,7 +163,9 @@ int main(int argc, char *argv[]) {
 
     double start = current_time_seconds();
 
-    // Allocate one contiguous array for processing
+    // Allocate one contiguous array instead of separate linked-list nodes.
+    // This reduces allocation overhead and removes next-node pointer chasing.
+    // Sequential records improve spatial locality and support CPU prefetching.
     SensorReading *processed = malloc(count * sizeof(SensorReading));
 
     if (processed == NULL) {
