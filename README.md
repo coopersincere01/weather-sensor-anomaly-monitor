@@ -289,3 +289,12 @@ The assembly analysis used GCC 16.2 at -O2, while the final benchmarks used GCC 
 Possible future improvements include measuring hardware cache misses using performance counters, examining larger datasets, and testing the program on ARM hardware.
 
 The measurements in this repository reflect the specified Codespaces environment. Execution times may vary on other systems.
+
+## Troubleshooting
+
+- **GCC not found:** Install GCC or use GitHub Codespaces, which provides a Linux development environment.
+- **Python not found:** Install Python 3 to run the benchmarking script.
+- **Benchmark executable missing:** Compile all six program variants using the commands in the Compilation Optimization Levels section before running benchmark.py.
+- **Invalid input:** Enter a whole number from 1 to 1000000.
+- **Different execution times:** Timing varies with system load, CPU scheduling, and hardware. Use multiple trials and compare medians.
+- **Unexpected output mismatch:** Recompile both implementations from the current source files and rerun benchmark.py. The script stops if the calculated results differ.
